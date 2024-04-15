@@ -1,4 +1,4 @@
-ceimport os
+import os
 import subprocess
 import pyudev
 from datetime import datetime, timedelta
