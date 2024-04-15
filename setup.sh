@@ -1,19 +1,26 @@
 #!/bin/bash
+set -x
 
-# Ask user to plug in mass storage and wait for confirmation
+
+# Ensure mass storage device is connected
 echo "Please ensure your mass storage device is plugged in."
 read -rp "Press any key to continue..."
 
-# List all connected mass storage devices and ask user to choose one
+# List connected mass storage devices
 echo "Listing all connected mass storage devices..."
 lsblk -o NAME,MODEL,SIZE,MOUNTPOINT,FSTYPE,TYPE | grep disk
+
+# Get the device name from user input
 read -rp "Enter the device name (e.g., sda1) to mount: " device_name
 
-# Mount the device if not already mounted
+# Check if mount directory exists, if not create it
 if [ ! -d "/media/$device_name" ]; then
   sudo mkdir -p /media/$device_name
 fi
+
+# Mount the device
 sudo mount /dev/$device_name /media/$device_name
+
 
 
 # Download the GitHub repository
