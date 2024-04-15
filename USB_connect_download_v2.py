@@ -7,6 +7,14 @@ import shutil
 import time
 import heapq
 
+def read_destination_dir():
+    try:
+        with open("home/pi/flydownloader/storage_path.txt", "r") as file:
+            return file.read().strip()  # Read the first line and strip any newline character
+    except FileNotFoundError:
+        print("Configuration file not found. Using default destination.")
+        return "/media/sda"  # Default path if no config file is found
+
 def check_disk_usage(path):
     """ Check disk space and return total, used, and free space in bytes. """
     total, used, free = shutil.disk_usage(path)
@@ -177,8 +185,8 @@ def create_movie_from_clips(video_paths, output_dir):
 
 def main():
     device_name = 'FLY6PRO'
-    mount_point = '/media/cycliq/FLY6PRO'
-    destination_dir = '/mnt/nvme'
+    mount_point = '/media/pi/FLY6PRO'
+    destination_dir = read_destination_dir()
 
     print('Monitoring for camera connection...')
     while True:
