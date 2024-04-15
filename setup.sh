@@ -2,19 +2,19 @@
 
 # Ask user to plug in mass storage and wait for confirmation
 echo "Please ensure your mass storage device is plugged in."
-read -p "Press Enter to continue..."
+read -rp "Press any key to continue..."
 
 # List all connected mass storage devices and ask user to choose one
 echo "Listing all connected mass storage devices..."
 lsblk -o NAME,MODEL,SIZE,MOUNTPOINT,FSTYPE,TYPE | grep disk
-
-read -p "Enter the device name (e.g., sda1) to mount: " device_name
+read -rp "Enter the device name (e.g., sda1) to mount: " device_name
 
 # Mount the device if not already mounted
 if [ ! -d "/media/$device_name" ]; then
   sudo mkdir -p /media/$device_name
 fi
 sudo mount /dev/$device_name /media/$device_name
+
 
 # Download the GitHub repository
 echo "Downloading program files from GitHub..."
