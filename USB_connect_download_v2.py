@@ -48,50 +48,38 @@ def is_camera_connected(device_name):
     return None
 
 
-def mount_device():
-    # Search for the FLY6PRO device
-    output = subprocess.check_output(['lsblk', '-o', 'NAME,LABEL,MOUNTPOINT']).decode('utf-8')
-    lines = output.strip().split('\n')
-    
-    for line in lines[1:]:  # Skip the header line
-        parts = line.split()
-        if len(parts) >= 2 and 'FLY6PRO' in parts[1]:
-            device_name = parts[0]
-            device_path = f'/dev/{device_name}'
-            mount_point = f'/media/pi/FLY6PRO'
-            
-            # Check if the mount point is already in use for the correct device
-            if os.path.ismount(mount_point):
-                # Check if the correct device is mounted there
-                try:
-                    uuid_path = '/dev/disk/by-uuid'
-                    if os.path.exists(uuid_path):
-                        current_device = os.path.realpath(os.path.join(uuid_path, os.listdir(uuid_path)[0]))
-                        if current_device == device_path:
-                            print(f"Device {device_path} is already mounted at {mount_point}.")
-                            return mount_point
-                    else:
-                        print(f"Warning: {uuid_path} does not exist. Skipping device check.")
-                except (OSError, IndexError):
-                    print(f"Warning: Failed to determine currently mounted device. Proceeding with mount attempt.")
-            
-            # If another device is mounted or device check failed, try a different mount point
-            original_mount_point = mount_point
-            mount_point += '_1'  # Modify as needed to create a unique mount point
-            print(f"Attempting to mount {device_path} to {mount_point} instead of {original_mount_point}.")
-            
-            # Proceed to mount if not already mounted
-            try:
-                os.makedirs(mount_point, exist_ok=True)
-                subprocess.run(['sudo', 'mount', device_path, mount_point], check=True)
-                print(f"Device mounted at {mount_point}.")
+def mount_device(device_path):
+    mount_point = '/media/pi/FLY6PRO'  # Hardcoded mount point
+
+    # Check if the mount point is already in use for the correct device
+    if os.path.ismount(mount_point):
+        # Check if the correct device is mounted there
+        try:
+            current_device = os.path.realpath(os.path.join('/dev/disk/by-uuid', os.listdir('/dev/disk/by-uuid')[0]))
+            if current_device == device_path:
+                print(f"Device {device_path} is already mounted at {mount_point}.")
                 return mount_point
-            except subprocess.CalledProcessError as e:
-                print(f"Failed to mount {device_path} at {mount_point}: {e}")
-                break
-    
-    print("FLY6PRO device not found.")
-    return None
+        except (FileNotFoundError, IndexError):
+            pass
+
+        # If another device is mounted, try a different mount point
+        original_mount_point = mount_point
+        i = 1
+        while os.path.ismount(mount_point):
+            mount_point = f"{original_mount_point}_{i}"
+            i += 1
+        print(f"Attempting to mount {device_path} to {mount_point} instead of {original_mount_point}.")
+
+    # Proceed to mount if not already mounted
+    try:
+        os.makedirs(mount_point, exist_ok=True)
+        subprocess.run(['sudo', 'mount', device_path, mount_point], check=True)
+        print(f"Device mounted at {mount_point}.")
+        return mount_point
+    except subprocess.CalledProcessError as e:
+        print(f"Failed to mount {device_path} at {mount_point}: {e}")
+        raise
+        
 
 def unmount_device(mount_point):
     subprocess.run(['sudo', 'umount', mount_point], check=True)
