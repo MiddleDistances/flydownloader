@@ -7,13 +7,23 @@ import shutil
 import time
 import heapq
 
-def read_destination_dir():
+def read_configuration():
+    # Set default values for configuration
+    config = {'user': 'pi'}  # default user
     try:
-        with open("home/pi/flydownloader/storage_path.txt", "r") as file:
-            return file.read().strip()  # Read the first line and strip any newline character
+        with open("storage_path.txt", "r") as file:
+            lines = file.readlines()
+            for line in lines:
+                key, value = line.strip().split('=')
+                config[key] = value
     except FileNotFoundError:
-        print("Configuration file not found. Using default destination.")
-        return "/media/sda"  # Default path if no config file is found
+        print("Configuration file not found. Using default settings.")
+    except ValueError:
+        print("Error reading configuration. Ensure it is in key=value format.")
+    
+    # Determine the mount point based on the user
+    config['mount_point'] = f"/media/{config['user']}/FLY6PRO"
+    return config
 
 def check_disk_usage(path):
     """ Check disk space and return total, used, and free space in bytes. """
@@ -47,41 +57,41 @@ def is_camera_connected(device_name):
             return device.device_node
     return None
 
+import os
+import subprocess
 
 def mount_device(device_path, mount_point):
-    # Check if the FLY6PRO device is already mounted
-    output = subprocess.check_output(['mount']).decode('utf-8')
-    if '/dev/sdb1' in output or '/dev/sdc1' in output:
-        print("FLY6PRO device is already mounted. Skipping mount process.")
-        return
-
-    # Check if the mount point is already in use for the correct device
+    # Check if the mount point already exists and something is mounted there
     if os.path.ismount(mount_point):
-        # Check if the correct device is mounted there
-        try:
-            current_device = os.path.realpath(os.path.join('/dev/disk/by-uuid', os.listdir('/dev/disk/by-uuid')[0]))
-            if current_device == device_path:
-                print(f"Device {device_path} is already mounted at {mount_point}.")
-                return
-        except (FileNotFoundError, IndexError):
-            pass
+        # Read the device currently mounted at that point
+        with open('/proc/mounts', 'r') as f:
+            mounts = f.readlines()
+        current_device = None
+        for mount in mounts:
+            parts = mount.split()
+            if len(parts) > 1 and parts[1] == mount_point:
+                current_device = parts[0]
+                break
 
-        # If another device is mounted, try a different mount point
-        original_mount_point = mount_point
-        i = 1
-        while os.path.ismount(mount_point):
-            mount_point = f"{original_mount_point}_{i}"
-            i += 1
-        print(f"Attempting to mount {device_path} to {mount_point} instead of {original_mount_point}.")
+        if current_device == device_path:
+            print(f"Device {device_path} is already mounted at {mount_point}.")
+            return
+        else:
+            # If another device is mounted, try a different mount point
+            original_mount_point = mount_point
+            mount_point += '1'  # Modify as needed to create a unique mount point
+            print(f"Attempting to mount {device_path} to {mount_point} instead of {original_mount_point}.")
+            os.makedirs(mount_point, exist_ok=True)  # Ensure the new mount point exists
 
     # Proceed to mount if not already mounted
     try:
-        os.makedirs(mount_point, exist_ok=True)
         subprocess.run(['sudo', 'mount', device_path, mount_point], check=True)
         print(f"Device mounted at {mount_point}.")
     except subprocess.CalledProcessError as e:
         print(f"Failed to mount {device_path} at {mount_point}: {e}")
         raise
+
+
 
 def unmount_device(mount_point):
     subprocess.run(['sudo', 'umount', mount_point], check=True)
@@ -197,13 +207,13 @@ def create_movie_from_clips(video_paths, output_dir):
 
 
 def main():
-    device_name = 'FLY6PRO'
-    mount_point = '/media/pi/FLY6PRO'
-    destination_dir = read_destination_dir()
+    config = read_configuration()
+    mount_point = config['mount_point']
+    destination_dir = mount_point  # destination_dir is the same as the mount point
 
     print('Monitoring for camera connection...')
     while True:
-        device_path = is_camera_connected(device_name)
+        device_path = is_camera_connected('FLY6PRO')  # Assuming device_name is constant
         if device_path:
             print('Camera connected. Mounting device...')
             try:
@@ -211,7 +221,8 @@ def main():
                 print('Device mounted. Starting file download...')
 
                 all_downloaded_files = []
-                for source_dir in ['/media/cycliq/FLY6PRO/DCIM/100_RIDE', '/media/cycliq/FLY6PRO/DCIM/101_RIDE', '/media/cycliq/FLY6PRO/DCIM/102_RIDE']:
+                for source_dir_suffix in ['DCIM/100_RIDE', 'DCIM/101_RIDE', 'DCIM/102_RIDE']:
+                    source_dir = os.path.join(mount_point, source_dir_suffix)
                     if os.path.exists(source_dir):
                         downloaded_files, total_size = download_new_files(source_dir, destination_dir)
                         all_downloaded_files.extend(downloaded_files)
@@ -225,12 +236,13 @@ def main():
             except subprocess.CalledProcessError as e:
                 print(f"Error occurred while mounting or unmounting the device: {str(e)}")
             
-            while is_camera_connected(device_name):
+            while is_camera_connected('FLY6PRO'):
                 time.sleep(1)  # Wait until the camera is disconnected
 
         else:
             print('Camera not connected. Waiting...')
             time.sleep(5)  # Check for camera connection every 5 seconds
+
 
 if __name__ == "__main__":
     main()
