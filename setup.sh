@@ -1,14 +1,14 @@
 #!/bin/bash
 
 # Ask user to plug in mass storage and wait for confirmation
-echo "Please ensure your mass storage device is plugged in. Press any key to continue..."
-read -n 1 -s
+echo "Please ensure your mass storage device is plugged in."
+read -p "Press Enter to continue..."
 
 # List all connected mass storage devices and ask user to choose one
 echo "Listing all connected mass storage devices..."
 lsblk -o NAME,MODEL,SIZE,MOUNTPOINT,FSTYPE,TYPE | grep disk
-echo "Enter the device name (e.g., sda1) to mount:"
-read device_name
+
+read -p "Enter the device name (e.g., sda1) to mount: " device_name
 
 # Mount the device if not already mounted
 if [ ! -d "/media/$device_name" ]; then
@@ -35,16 +35,28 @@ deactivate
 # Configure Samba to share the mounted device
 echo "Configuring Samba..."
 sudo cp /etc/samba/smb.conf /etc/samba/smb.conf.backup
-echo "[$device_name]
+
+echo "[global]
+workgroup = WORKGROUP
+server string = Samba Server
+security = user
+create mask = 0664
+directory mask = 0775
+force user = root
+force group = root
+
+[$device_name]
 path = /media/$device_name
 writeable = Yes
 create mask = 0777
 directory mask = 0777
 public = no" | sudo tee -a /etc/samba/smb.conf
+
 sudo systemctl restart smbd
 
 # Create a systemd service to run the script at boot
 echo "Creating systemd service..."
+
 echo "[Unit]
 Description=Fly Downloader Service
 After=network.target
