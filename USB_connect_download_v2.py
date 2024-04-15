@@ -217,7 +217,7 @@ def main():
         if device_path:
             print('Camera connected. Mounting device...')
             try:
-                mount_device(device_path, mount_point)
+                mount_device()
                 print('Device mounted. Starting file download...')
 
                 all_downloaded_files = []
