@@ -49,18 +49,31 @@ def is_camera_connected(device_name):
 
 
 def mount_device(device_path, mount_point):
+    # Check if the FLY6PRO device is already mounted
+    output = subprocess.check_output(['mount']).decode('utf-8')
+    if '/dev/sdb1' in output or '/dev/sdc1' in output:
+        print("FLY6PRO device is already mounted. Skipping mount process.")
+        return
+
     # Check if the mount point is already in use for the correct device
     if os.path.ismount(mount_point):
         # Check if the correct device is mounted there
-        current_device = os.path.realpath('/dev/disk/by-uuid/' + os.readlink('/dev/disk/by-uuid').split('/')[-1])
-        if current_device == device_path:
-            print(f"Device {device_path} is already mounted at {mount_point}.")
-            return
-        else:
-            # If another device is mounted, try a different mount point
-            original_mount_point = mount_point
-            mount_point += '1'  # Modify as needed to create a unique mount point
-            print(f"Attempting to mount {device_path} to {mount_point} instead of {original_mount_point}.")
+        try:
+            current_device = os.path.realpath(os.path.join('/dev/disk/by-uuid', os.listdir('/dev/disk/by-uuid')[0]))
+            if current_device == device_path:
+                print(f"Device {device_path} is already mounted at {mount_point}.")
+                return
+        except (FileNotFoundError, IndexError):
+            pass
+
+        # If another device is mounted, try a different mount point
+        original_mount_point = mount_point
+        i = 1
+        while os.path.ismount(mount_point):
+            mount_point = f"{original_mount_point}_{i}"
+            i += 1
+        print(f"Attempting to mount {device_path} to {mount_point} instead of {original_mount_point}.")
+
     # Proceed to mount if not already mounted
     try:
         os.makedirs(mount_point, exist_ok=True)
@@ -69,7 +82,6 @@ def mount_device(device_path, mount_point):
     except subprocess.CalledProcessError as e:
         print(f"Failed to mount {device_path} at {mount_point}: {e}")
         raise
-        
 
 def unmount_device(mount_point):
     subprocess.run(['sudo', 'umount', mount_point], check=True)
