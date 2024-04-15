@@ -1,4 +1,4 @@
-import os
+ceimport os
 import subprocess
 import pyudev
 from datetime import datetime, timedelta
@@ -205,7 +205,7 @@ def main():
         if device_path:
             print('Camera connected. Mounting device...')
             try:
-                mount_device()
+                mount_device(device_path)
                 print('Device mounted. Starting file download...')
 
                 all_downloaded_files = []
