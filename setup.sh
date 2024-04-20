@@ -84,7 +84,6 @@ After=network.target
 \[Service\]
 ExecStart=/opt/flydownloader/venv/bin/python /opt/flydownloader/file_downloader.py
 WorkingDirectory=/opt/flydownloader
-EnvironmentFile=/opt/flydownloader/storage_path.txt
 Restart=always
 
 \[Install\]
