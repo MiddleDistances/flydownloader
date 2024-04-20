@@ -96,18 +96,19 @@ valid users = $current_user" | sudo tee -a /etc/samba/smb.conf
 sudo systemctl restart smbd
 
 # Create a systemd service to run the script at boot
-echo "Creating systemd service..."
-echo "[Unit]
+echo 'Creating systemd service...'
+echo '[Unit]
 Description=Fly Downloader Service
 After=network.target
 
 [Service]
-ExecStart=/home/$current_user/flydownloader/venv/bin/python /home/$current_user/flydownloader/USB_connect_download_v2.py
-WorkingDirectory=/home/$current_user/flydownloader
+ExecStart=/home/pi/flydownloader/venv/bin/python /home/pi/flydownloader/USB_connect_download_v2.py
+WorkingDirectory=/home/pi/flydownloader
 Restart=always
 
 [Install]
-WantedBy=multi-user.target" | sudo tee /etc/systemd/system/flydownloader.service
+WantedBy=multi-user.target' | sudo tee /etc/systemd/system/flydownloader.service
+
 
 # Enable and start the service
 sudo systemctl enable flydownloader.service
