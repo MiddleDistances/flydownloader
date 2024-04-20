@@ -1,69 +1,54 @@
 #!/bin/bash
 
-# Ensure the script is run as root to avoid permission issues
-if [[ $(id -u) -ne 0 ]]; then
-  echo "Please run this script as root or use sudo."
-  exit 1
-fi
-
 echo "Listing all connected storage devices:"
-lsblk -o NAME,MODEL,SIZE,MOUNTPOINT,FSTYPE,TYPE | grep -E 'disk|part'
+lsblk -o NAME,MODEL,SIZE,MOUNTPOINT,FSTYPE,TYPE
 
-# Create an associative array to hold device/partition choices
-declare -A device_map
+# Array to store devices
+declare -a devices
+readarray -t devices < <(lsblk -dno NAME,TYPE | grep disk | awk '{print $1}')
+
+# Display devices
 index=1
-
-# Populate the array with available devices and partitions
-while IFS= read -r line; do
-    device_name=$(echo $line | awk '{print $1}')
-    device_map[$index]=$device_name
-    echo "$index) $line"
+for dev in "${devices[@]}"; do
+    echo "$index) /dev/$dev"
     ((index++))
-done < <(lsblk -o NAME,MODEL,SIZE,MOUNTPOINT,FSTYPE,TYPE --noheadings | grep -E 'disk|part')
+done
 
-# Prompt user to select a device or partition
-read -rp "Enter the number corresponding to the device or partition: " choice
+# User selects the device
+read -rp "Enter the number corresponding to the device: " choice
+selected_device="/dev/${devices[$choice-1]}"
 
-# Get the selected device or partition from the map
-selected_device=${device_map[$choice]}
+# Show partitions on selected device
+lsblk -o NAME,SIZE,MOUNTPOINT,FSTYPE "$selected_device"
 
-if [ -z "$selected_device" ]; then
-  echo "Invalid selection. Exiting."
-  exit 1
-fi
+# User selects the partition to mount (could add similar logic as above for partitions)
+read -rp "Enter the partition name (e.g., ${selected_device}1): " selected_partition
 
-echo "Selected device or partition: $selected_device"
-
-# Get the full path and filesystem type
-partition_path="/dev/$selected_device"
-fs_type=$(lsblk -no FSTYPE $partition_path)
-
-if [ -z "$fs_type" ]; then
-  echo "Filesystem type not found for $partition_path. Please specify manually."
-  read -rp "Enter the filesystem type manually (e.g., ext4, ntfs): " fs_type
-fi
-
-# Set and create the mount directory
+# Mount point
 read -rp "Enter your desired mount point (e.g., /mnt/ExternalDrive): " mount_dir
-mkdir -p "$mount_dir"
-echo "Created mount directory at $mount_dir"
+if [[ ! "$mount_dir" == /* ]]; then
+    echo "Please enter an absolute path for the mount point."
+    exit 1
+fi
+sudo mkdir -p "$mount_dir"
 
-# Update /etc/fstab
-uuid=$(blkid -s UUID -o value $partition_path)
-fstab_entry="UUID=$uuid $mount_dir $fs_type defaults 0 2"
-
-# Remove the old entry if it exists
-sed -i "/^UUID=$uuid/d" /etc/fstab
-
+# Update /etc/fstab and mount
+uuid=$(blkid -s UUID -o value "$selected_partition")
 if ! grep -q "$uuid" /etc/fstab; then
-  echo "$fstab_entry" >> /etc/fstab
-  echo "Added $partition_path to /etc/fstab."
+    echo "UUID=$uuid $mount_dir ext4 defaults 0 2" | sudo tee -a /etc/fstab
+    sudo mount -a
+    sudo systemctl daemon-reload
 else
-  echo "UUID already in /etc/fstab."
+    echo "UUID already in /etc/fstab."
 fi
 
-# Mount the partition
-mount $partition_path $mount_dir && echo "$partition_path has been mounted at $mount_dir."
+# Check mount
+if mountpoint -q "$mount_dir"; then
+    echo "Mount successful at $mount_dir."
+else
+    echo "Mount failed, please check the device and fstab."
+fi
+
 
 # Verify the mount
 if mountpoint -q $mount_dir; then
