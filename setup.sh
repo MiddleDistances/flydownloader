@@ -1,53 +1,58 @@
 #!/bin/bash
 
+# Ensure the script is run as root
+if [[ $(id -u) -ne 0 ]]; then
+  echo "This script must be run as root or with sudo."
+  exit 1
+fi
+
 echo "Listing all connected storage devices:"
-lsblk -o NAME,MODEL,SIZE,MOUNTPOINT,FSTYPE,TYPE | grep -E 'disk|part'
+lsblk -o NAME,MODEL,SIZE,MOUNTPOINT,FSTYPE,TYPE
 
-# Prompt user to select a device or partition
-read -rp "Enter the device name (e.g., sda): " device_name
+# Automatically identify the first external partition
+external_part=$(lsblk -rno NAME,TYPE,MOUNTPOINT | awk '$2=="part" && $3=="" {print $1; exit}')
 
-# Validate device name
-if ! lsblk | grep -q "$device_name"; then
-  echo "Device not found. Make sure you input the correct device name."
+if [ -z "$external_part" ]; then
+  echo "No suitable external partitions found. Please ensure your external drive is connected."
   exit 1
 fi
 
-echo "Selected device: /dev/$device_name"
+# Create a mount point in /mnt if not already existing
+mount_dir="/mnt/auto_mounted_drive"
+mkdir -p "$mount_dir"
 
-# Get partition details
-lsblk -o NAME,SIZE,MOUNTPOINT,FSTYPE "/dev/$device_name" | grep 'part'
-read -rp "Enter the partition name (e.g., ${device_name}1): " selected_partition
+echo "Selected partition: /dev/$external_part"
+echo "Mount point will be: $mount_dir"
 
-# Full path for partition
-partition_path="/dev/$selected_partition"
+# Get UUID and Filesystem Type
+uuid=$(blkid -o value -s UUID "/dev/$external_part")
+fs_type=$(blkid -o value -s TYPE "/dev/$external_part")
 
-# Mount point
-read -rp "Enter your desired mount point (e.g., /mnt/ExternalDrive): " mount_dir
-sudo mkdir -p "$mount_dir"
-
-# Get UUID
-uuid=$(blkid -s UUID -o value "$partition_path")
-if [[ -z "$uuid" ]]; then
-  echo "Failed to get UUID for $partition_path. Ensure the partition exists."
+if [ -z "$uuid" ] || [ -z "$fs_type" ]; then
+  echo "Failed to retrieve UUID or filesystem type for /dev/$external_part."
   exit 1
 fi
 
-# Add to fstab
-fstab_entry="UUID=$uuid $mount_dir $(lsblk -no FSTYPE "$partition_path") defaults 0 2"
+# Prepare /etc/fstab entry
+fstab_entry="UUID=$uuid $mount_dir $fs_type defaults 0 2"
+
+# Check if UUID already in /etc/fstab and add if not
 if ! grep -q "$uuid" /etc/fstab; then
-  echo "$fstab_entry" | sudo tee -a /etc/fstab
+  echo "$fstab_entry" >> /etc/fstab
+  echo "Added to /etc/fstab: $fstab_entry"
+else
+  echo "UUID already in /etc/fstab."
 fi
 
-# Attempt to mount
-sudo mount "$partition_path" "$mount_dir"
+# Mount the drive
+mount "/dev/$external_part" "$mount_dir" && echo "/dev/$external_part has been successfully mounted at $mount_dir."
+
+# Verify the mount
 if mountpoint -q "$mount_dir"; then
-  echo "$partition_path has been mounted at $mount_dir."
+  echo "Mount verification successful."
 else
-  echo "Mount failed, cleaning up fstab and mount point."
-  sudo sed -i "\|${uuid}|d" /etc/fstab  # Remove the faulty fstab entry
-  sudo rmdir "$mount_dir"
+  echo "Mount failed, please check the details and try again."
   exit 1
 fi
 
-echo "Setup complete!"
-
+echo "Setup complete! Your device /dev/$external_part is set up at $mount_dir."
