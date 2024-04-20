@@ -52,6 +52,9 @@ echo "Created mount directory at $mount_dir"
 uuid=$(blkid -s UUID -o value $partition_path)
 fstab_entry="UUID=$uuid $mount_dir $fs_type defaults 0 2"
 
+# Remove the old entry if it exists
+sed -i "/^UUID=$uuid/d" /etc/fstab
+
 if ! grep -q "$uuid" /etc/fstab; then
   echo "$fstab_entry" >> /etc/fstab
   echo "Added $partition_path to /etc/fstab."
