@@ -97,16 +97,16 @@ sudo systemctl restart smbd
 
 # Create a systemd service to run the script at boot
 echo 'Creating systemd service...'
-echo '\[Unit]
+echo '[Unit]
 Description=Fly Downloader Service
 After=network.target
 
-\[Service]
+[Service]
 ExecStart=/home/pi/flydownloader/venv/bin/python /home/pi/flydownloader/USB_connect_download_v2.py
 WorkingDirectory=/home/pi/flydownloader
 Restart=always
 
-\[Install]
+[Install]
 WantedBy=multi-user.target' | sudo tee /etc/systemd/system/flydownloader.service
 
 
