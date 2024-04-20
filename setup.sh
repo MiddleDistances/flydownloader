@@ -1,6 +1,6 @@
 #!/bin/bash
-set -x
 
+set -x
 
 # Ensure mass storage device is connected
 echo "Please ensure your mass storage device is plugged in."
@@ -13,13 +13,25 @@ lsblk -o NAME,MODEL,SIZE,MOUNTPOINT,FSTYPE,TYPE | grep disk
 # Get the device name from user input
 read -rp "Enter the device name (e.g., sda1) to mount: " device_name
 
+# Get the filesystem type
+read -rp "Enter the filesystem type (e.g., ext4, ntfs): " fs_type
+
 # Check if mount directory exists, if not create it
-if [ ! -d "/media/$device_name" ]; then
-  sudo mkdir -p /media/$device_name
+mount_dir="/media/$device_name"
+if [ ! -d "$mount_dir" ]; then
+  sudo mkdir -p $mount_dir
 fi
 
 # Mount the device
-sudo mount /dev/$device_name /media/$device_name
+sudo mount /dev/$device_name $mount_dir
+
+# Record the full device location as a variable
+device_location="/dev/$device_name"
+
+# Add an entry to /etc/fstab for automatic mounting on boot
+echo "$device_location $mount_dir $fs_type defaults 0 0" | sudo tee -a /etc/fstab
+
+echo "The device $device_name has been mounted at $mount_dir and will be automatically mounted on boot."
 
 
 
@@ -29,7 +41,7 @@ sudo apt-get install -y git
 git clone https://github.com/MiddleDistances/flydownloader.git /opt/flydownloader
 
 # Create a helper file with the mass storage directory
-echo "/media/$device_name" > /opt/flydownloader/storage_path.txt
+echo "$mount_dir" | sudo tee /opt/flydownloader/storage_path.txt
 
 # Setup Python environment and install dependencies
 echo "Setting up Python environment..."
