@@ -1,31 +1,45 @@
 #!/bin/bash
 
-# Ensure the script is run as root
+# Ensure the script is run as root to avoid permission issues
 if [[ $(id -u) -ne 0 ]]; then
   echo "Please run this script as root or use sudo."
   exit 1
 fi
 
 echo "Listing all connected storage devices:"
-lsblk -o NAME,MODEL,SIZE,MOUNTPOINT,FSTYPE,TYPE
+lsblk -o NAME,MODEL,SIZE,MOUNTPOINT,FSTYPE,TYPE | grep -E 'disk|part'
 
-# Ask the user to specify the device
-read -rp "Enter the device name (e.g., sda): " device_name
+# Create an associative array to hold device/partition choices
+declare -A device_map
+index=1
 
-# Validate device name and find the partition
-partition_name=$(lsblk -o NAME,TYPE -p | grep "part" | grep "$device_name" | awk '{print $1}' | head -n 1)
+# Populate the array with available devices and partitions
+while IFS= read -r line; do
+    device_name=$(echo $line | awk '{print $1}')
+    device_map[$index]=$device_name
+    echo "$index) $line"
+    ((index++))
+done < <(lsblk -o NAME,MODEL,SIZE,MOUNTPOINT,FSTYPE,TYPE --noheadings | grep -E 'disk|part')
 
-if [ -z "$partition_name" ]; then
-  echo "No partition found on the selected device. Please check the device and try again."
+# Prompt user to select a device or partition
+read -rp "Enter the number corresponding to the device or partition: " choice
+
+# Get the selected device or partition from the map
+selected_device=${device_map[$choice]}
+
+if [ -z "$selected_device" ]; then
+  echo "Invalid selection. Exiting."
   exit 1
 fi
 
-echo "Selected partition: $partition_name"
+echo "Selected device or partition: $selected_device"
 
-# Fetch the filesystem type
-fs_type=$(lsblk -no FSTYPE "$partition_name")
+# Get the full path and filesystem type
+partition_path="/dev/$selected_device"
+fs_type=$(lsblk -no FSTYPE $partition_path)
+
 if [ -z "$fs_type" ]; then
-  echo "Filesystem type not found for partition $partition_name. Please specify manually."
+  echo "Filesystem type not found for $partition_path. Please specify manually."
   read -rp "Enter the filesystem type manually (e.g., ext4, ntfs): " fs_type
 fi
 
@@ -34,24 +48,22 @@ read -rp "Enter your desired mount point (e.g., /mnt/ExternalDrive): " mount_dir
 mkdir -p "$mount_dir"
 echo "Created mount directory at $mount_dir"
 
-# Fetch UUID and update /etc/fstab
-uuid=$(blkid -s UUID -o value "$partition_name")
+# Update /etc/fstab
+uuid=$(blkid -s UUID -o value $partition_path)
 fstab_entry="UUID=$uuid $mount_dir $fs_type defaults 0 2"
 
 if ! grep -q "$uuid" /etc/fstab; then
   echo "$fstab_entry" >> /etc/fstab
-  echo "Added $partition_name to /etc/fstab."
+  echo "Added $partition_path to /etc/fstab."
 else
   echo "UUID already in /etc/fstab."
 fi
 
 # Mount the partition
-if ! mount | grep -qs "$mount_dir"; then
-  mount "$partition_name" "$mount_dir" && echo "$partition_name has been mounted at $mount_dir."
-fi
+mount $partition_path $mount_dir && echo "$partition_path has been mounted at $mount_dir."
 
 # Verify the mount
-if mountpoint -q "$mount_dir"; then
+if mountpoint -q $mount_dir; then
   echo "Mount verification successful."
 else
   echo "Mount failed. Check with 'dmesg' for more information."
@@ -59,11 +71,12 @@ else
 fi
 
 # Adjust permissions
-chown pi:pi "$mount_dir"
-chmod 775 "$mount_dir"
+chown pi:pi $mount_dir
+chmod 775 $mount_dir
 echo "Permissions adjusted for $mount_dir"
 
-echo "Setup complete! Your device $partition_name is set up at $mount_dir."
+echo "Setup complete! Your device $partition_path is set up at $mount_dir."
+
 
 
 
