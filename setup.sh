@@ -49,26 +49,30 @@ fi
 
 echo "The partition $partition_name has been mounted at $mount_dir and will be automatically mounted on boot."
 
+# Get the current user
+current_user=$(logname)
+
+
 # Download the GitHub repository
 echo "Downloading program files from GitHub..."
 sudo apt-get install -y git
-sudo rm -rf /home/$USER/flydownloader  # Remove the existing directory and its contents
-sudo git clone https://github.com/MiddleDistances/flydownloader.git /home/$USER/flydownloader
+sudo rm -rf /home/$current_user/flydownloader  # Remove the existing directory and its contents
+sudo git clone https://github.com/MiddleDistances/flydownloader.git /home/$current_user/flydownloader
 
 
 # Change ownership of the flydownloader directory to the current user
 echo "Changing ownership of the flydownloader directory..."
-sudo chown -R $USER:$USER /home/$USER/flydownloader
+sudo chown -R $current_user:$current_user /home/$current_user/flydownloader
 
 # Create a helper file with the mass storage directory
-echo "$mount_dir" | sudo tee /home/$USER/flydownloader/storage_path.txt
+echo "$mount_dir" | sudo tee /home/$current_user/flydownloader/storage_path.txt
 
 # Setup Python environment and install dependencies
 echo "Setting up Python environment..."
 sudo apt-get install -y python3-venv
-python3 -m venv /home/$USER/flydownloader/venv
-source /home/$USER/flydownloader/venv/bin/activate
-pip install -r /home/$USER/flydownloader/requirements.txt
+python3 -m venv /home/$current_user/flydownloader/venv
+source /home/$current_user/flydownloader/venv/bin/activate
+pip install -r /home/$current_user/flydownloader/requirements.txt
 deactivate
 
 # Configure Samba to share the mounted device
@@ -87,7 +91,7 @@ writeable = Yes
 create mask = 0664
 directory mask = 0775
 public = no
-valid users = $USER" | sudo tee -a /etc/samba/smb.conf
+valid users = $current_user" | sudo tee -a /etc/samba/smb.conf
 
 sudo systemctl restart smbd
 
@@ -98,8 +102,8 @@ Description=Fly Downloader Service
 After=network.target
 
 \[Service\]
-ExecStart=/home/$USER/flydownloader/venv/bin/python /home/$USER/flydownloader/USB_connect_download_v2.py
-WorkingDirectory=/home/$USER/flydownloader
+ExecStart=/home/$current_user/flydownloader/venv/bin/python /home/$current_user/flydownloader/USB_connect_download_v2.py
+WorkingDirectory=/home/$current_user/flydownloader
 Restart=always
 
 \[Install\]
