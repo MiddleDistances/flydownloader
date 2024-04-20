@@ -36,7 +36,9 @@ echo "The device $device_name has been mounted at $mount_dir and will be automat
 # Download the GitHub repository
 echo "Downloading program files from GitHub..."
 sudo apt-get install -y git
-sudo git clone https://github.com/MiddleDistances/flydownloader.git /opt/flydownloader
+sudo rm -rf /opt/flydownloader  # Remove the existing directory and its contents
+sudo git clone --force https://github.com/MiddleDistances/flydownloader.git /opt/flydownloader
+
 
 # Change ownership of the flydownloader directory to the current user
 echo "Changing ownership of the flydownloader directory..."
