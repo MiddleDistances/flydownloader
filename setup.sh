@@ -13,13 +13,13 @@ lsblk -o NAME,MODEL,SIZE,MOUNTPOINT,FSTYPE,TYPE | grep disk
 # Get the device name from user input
 read -rp "Enter the device name (e.g., sda1) to mount: " device_name
 
-# Get the filesystem type
-read -rp "Enter the filesystem type (e.g., ext4, ntfs): " fs_type
+# Get the filesystem type automatically
+fs_type=$(lsblk -no FSTYPE /dev/$device_name)
 
-# Check if mount directory exists, if not create it
-mount_dir="/mnt/$device_name"
-if [ ! -d "$mount_dir" ]; then
-  sudo mkdir -p $mount_dir
+# Check if filesystem type is empty
+if [ -z "$fs_type" ]; then
+  echo "Filesystem type not found for device $device_name. Please specify the filesystem type manually."
+  read -rp "Enter the filesystem type (e.g., ext4, ntfs): " fs_type
 fi
 
 # Mount the device
