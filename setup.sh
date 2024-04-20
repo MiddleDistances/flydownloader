@@ -52,7 +52,7 @@ echo "The partition $partition_name has been mounted at $mount_dir and will be a
 # Download the GitHub repository
 echo "Downloading program files from GitHub..."
 sudo apt-get install -y git
-sudo rm -rf /opt/flydownloader  # Remove the existing directory and its contents
+sudo rm -rf /home/$USER/flydownloader  # Remove the existing directory and its contents
 sudo git clone https://github.com/MiddleDistances/flydownloader.git /home/$USER/flydownloader
 
 
@@ -99,7 +99,7 @@ After=network.target
 
 \[Service\]
 ExecStart=/home/$USER/flydownloader/venv/bin/python /home/$USER/flydownloader/USB_connect_download_v2.py
-WorkingDirectory=/opt/flydownloader
+WorkingDirectory=/home/$USER/flydownloader
 Restart=always
 
 \[Install\]
