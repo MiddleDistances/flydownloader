@@ -11,50 +11,64 @@ echo "Listing all connected mass storage devices..."
 lsblk -o NAME,MODEL,SIZE,MOUNTPOINT,FSTYPE,TYPE | grep disk
 
 # Get the device name from user input
-read -rp "Enter the device name (e.g., sda1) to mount: " device_name
+read -rp "Enter the device name (e.g., sda): " device_name
 
-# Get the filesystem type automatically
-fs_type=$(lsblk -no FSTYPE /dev/$device_name)
+# Find the partition on the selected device
+partition_name=$(lsblk -o NAME,TYPE | grep "${device_name}" | grep part | awk '{print $1}')
+
+if [ -z "$partition_name" ]; then
+  echo "No partition found on the selected device. Please check the device and try again."
+  exit 1
+fi
+
+# Get the filesystem type
+fs_type=$(lsblk -no FSTYPE "/dev/$partition_name")
 
 # Check if filesystem type is empty
 if [ -z "$fs_type" ]; then
-  echo "Filesystem type not found for device $device_name. Please specify the filesystem type manually."
+  echo "Filesystem type not found for partition $partition_name. Please specify the filesystem type manually."
   read -rp "Enter the filesystem type (e.g., ext4, ntfs): " fs_type
 fi
 
-# Mount the device
-sudo mount /dev/$device_name $mount_dir
+# Set the mount directory
+mount_dir="/mnt/$partition_name"
 
-# Record the full device location as a variable
-device_location="/dev/$device_name"
-
-# if the fstab entry does not exist, Add an entry to /etc/fstab for automatic mounting on boot
-if ! grep -q "$device_location $mount_dir" /etc/fstab; then
-    echo "$device_location $mount_dir $fs_type defaults 0 0" | sudo tee -a /etc/fstab
+# Check if mount directory exists, if not create it
+if [ ! -d "$mount_dir" ]; then
+  sudo mkdir -p "$mount_dir"
 fi
 
-echo "The device $device_name has been mounted at $mount_dir and will be automatically mounted on boot."
+# Mount the partition
+sudo mount "/dev/$partition_name" "$mount_dir"
+
+# Check if the partition is already listed in /etc/fstab
+if ! grep -q "$partition_name" /etc/fstab; then
+  # Add the partition to /etc/fstab for automatic mounting on boot
+  echo "/dev/$partition_name $mount_dir $fs_type defaults 0 0" | sudo tee -a /etc/fstab
+fi
+
+echo "The partition $partition_name has been mounted at $mount_dir and will be automatically mounted on boot."
 
 # Download the GitHub repository
 echo "Downloading program files from GitHub..."
 sudo apt-get install -y git
 sudo rm -rf /opt/flydownloader  # Remove the existing directory and its contents
-sudo git clone https://github.com/MiddleDistances/flydownloader.git /opt/flydownloader
+sudo git clone https://github.com/MiddleDistances/flydownloader.git /home/$USER/flydownloader
 
 
 # Change ownership of the flydownloader directory to the current user
 echo "Changing ownership of the flydownloader directory..."
-sudo chown -R $USER:$USER /opt/flydownloader
+sudo chown -R $USER:$USER /home/$USER/flydownloader
 
 # Create a helper file with the mass storage directory
-echo "$mount_dir" | sudo tee /opt/flydownloader/storage_path.txt
+echo "$mount_dir" | sudo tee /home/$USER/flydownloader/storage_path.txt
 
 # Setup Python environment and install dependencies
 echo "Setting up Python environment..."
 sudo apt-get install -y python3-venv
-python3 -m venv /opt/flydownloader/venv
-source /opt/flydownloader/venv/bin/activate
-pip install -r /opt/flydownloader/requirements.txt
+python3 -m venv /home/$USER/flydownloader/venv
+source /home/$USER/flydownloader/venv/bin/activate
+pip install -r /home/$USER/flydownloader/requirements.txt
 deactivate
 
 # Configure Samba to share the mounted device
