@@ -76,6 +76,11 @@ source /home/$current_user/flydownloader/venv/bin/activate
 pip install -r /home/$current_user/flydownloader/requirements.txt
 deactivate
 
+#install samba
+sudo apt-get install samba -y
+sudo systemctl restart smbd
+
+
 # Configure Samba to share the mounted device
 echo "Configuring Samba..."
 sudo cp /etc/samba/smb.conf /etc/samba/smb.conf.backup
