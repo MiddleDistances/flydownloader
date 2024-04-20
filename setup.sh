@@ -17,7 +17,7 @@ read -rp "Enter the device name (e.g., sda1) to mount: " device_name
 read -rp "Enter the filesystem type (e.g., ext4, ntfs): " fs_type
 
 # Check if mount directory exists, if not create it
-mount_dir="/media/$device_name"
+mount_dir="/mnt/$device_name"
 if [ ! -d "$mount_dir" ]; then
   sudo mkdir -p $mount_dir
 fi
@@ -33,12 +33,14 @@ echo "$device_location $mount_dir $fs_type defaults 0 0" | sudo tee -a /etc/fsta
 
 echo "The device $device_name has been mounted at $mount_dir and will be automatically mounted on boot."
 
-
-
 # Download the GitHub repository
 echo "Downloading program files from GitHub..."
 sudo apt-get install -y git
-git clone https://github.com/MiddleDistances/flydownloader.git /opt/flydownloader
+sudo git clone https://github.com/MiddleDistances/flydownloader.git /opt/flydownloader
+
+# Change ownership of the flydownloader directory to the current user
+echo "Changing ownership of the flydownloader directory..."
+sudo chown -R $USER:$USER /opt/flydownloader
 
 # Create a helper file with the mass storage directory
 echo "$mount_dir" | sudo tee /opt/flydownloader/storage_path.txt
@@ -54,39 +56,36 @@ deactivate
 # Configure Samba to share the mounted device
 echo "Configuring Samba..."
 sudo cp /etc/samba/smb.conf /etc/samba/smb.conf.backup
-
-echo "[global]
+echo "\[global\]
 workgroup = WORKGROUP
 server string = Samba Server
 security = user
 create mask = 0664
 directory mask = 0775
-force user = root
-force group = root
 
-[$device_name]
-path = /media/$device_name
+\[$device_name\]
+path = $mount_dir
 writeable = Yes
-create mask = 0777
-directory mask = 0777
-public = no" | sudo tee -a /etc/samba/smb.conf
+create mask = 0664
+directory mask = 0775
+public = no
+valid users = $USER" | sudo tee -a /etc/samba/smb.conf
 
 sudo systemctl restart smbd
 
 # Create a systemd service to run the script at boot
 echo "Creating systemd service..."
-
-echo "[Unit]
+echo "\[Unit\]
 Description=Fly Downloader Service
 After=network.target
 
-[Service]
+\[Service\]
 ExecStart=/opt/flydownloader/venv/bin/python /opt/flydownloader/file_downloader.py
 WorkingDirectory=/opt/flydownloader
 EnvironmentFile=/opt/flydownloader/storage_path.txt
 Restart=always
 
-[Install]
+\[Install\]
 WantedBy=multi-user.target" | sudo tee /etc/systemd/system/flydownloader.service
 
 # Enable and start the service
