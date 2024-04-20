@@ -5,49 +5,82 @@ set -x
 # Ensure mass storage device is connected
 echo "Please ensure your mass storage device is plugged in."
 read -rp "Press any key to continue..."
+#!/bin/bash
 
-# List connected mass storage devices
-echo "Listing all connected mass storage devices..."
+# Ensure the script is run as root to avoid permission issues
+if [[ $(id -u) -ne 0 ]]; then
+  echo "Please run this script as root or use sudo."
+  exit 1
+fi
+
+echo "Listing all connected storage devices:"
 lsblk -o NAME,MODEL,SIZE,MOUNTPOINT,FSTYPE,TYPE | grep disk
 
-# Get the device name from user input
+# Ask the user to specify the device
 read -rp "Enter the device name (e.g., sda): " device_name
 
+# Check if the device exists
+if ! lsblk | grep -q "$device_name"; then
+  echo "Device not found. Make sure you input the correct device name."
+  exit 1
+fi
+
 # Find the partition on the selected device
-partition_name=$(lsblk -o NAME,TYPE | grep "${device_name}" | grep part | awk '{print $1}')
+partition_name=$(lsblk -o NAME,TYPE -p | grep "${device_name}" | grep -m 1 'part' | awk '{print $1}')
 
 if [ -z "$partition_name" ]; then
   echo "No partition found on the selected device. Please check the device and try again."
   exit 1
 fi
 
-# Get the filesystem type
-fs_type=$(lsblk -no FSTYPE "/dev/$partition_name")
+echo "Selected partition: $partition_name"
 
-# Check if filesystem type is empty
+# Getting the filesystem type
+fs_type=$(lsblk -no FSTYPE "$partition_name")
 if [ -z "$fs_type" ]; then
-  echo "Filesystem type not found for partition $partition_name. Please specify the filesystem type manually."
-  read -rp "Enter the filesystem type (e.g., ext4, ntfs): " fs_type
+  echo "Filesystem type not found for partition $partition_name."
+  read -rp "Please specify the filesystem type manually (e.g., ext4, ntfs): " fs_type
 fi
 
 # Set the mount directory
-mount_dir="/mnt/$partition_name"
+read -rp "Enter your desired mount point (e.g., /mnt/ExternalDrive): " mount_dir
 
-# Check if mount directory exists, if not create it
+# Create the mount directory if it does not exist
 if [ ! -d "$mount_dir" ]; then
-  sudo mkdir -p "$mount_dir"
+  mkdir -p "$mount_dir"
+  echo "Created mount directory at $mount_dir"
 fi
 
-# Mount the partition
-sudo mount "/dev/$partition_name" "$mount_dir"
+# Update /etc/fstab
+uuid=$(blkid -s UUID -o value "$partition_name")
+fstab_entry="UUID=$uuid $mount_dir $fs_type defaults 0 2"
 
-# Check if the partition is already listed in /etc/fstab
-if ! grep -q "$partition_name" /etc/fstab; then
-  # Add the partition to /etc/fstab for automatic mounting on boot
-  echo "/dev/$partition_name $mount_dir $fs_type defaults 0 0" | sudo tee -a /etc/fstab
+if ! grep -q "$uuid" /etc/fstab; then
+  echo "$fstab_entry" >> /etc/fstab
+  echo "Added $partition_name to /etc/fstab."
+else
+  echo "UUID already in /etc/fstab."
 fi
 
-echo "The partition $partition_name has been mounted at $mount_dir and will be automatically mounted on boot."
+# Mount the drive
+mount "$partition_name" "$mount_dir"
+echo "$partition_name has been mounted at $mount_dir."
+
+# Verify the mount
+if mountpoint -q "$mount_dir"; then
+  echo "Mount verification successful."
+else
+  echo "Mount failed."
+  exit 1
+fi
+
+# Adjust permissions
+chown pi:pi "$mount_dir"
+chmod 775 "$mount_dir"
+echo "Permissions adjusted for $mount_dir"
+
+echo "Setup complete! Your device $partition_name is set up at $mount_dir."
+
 
 # Get the current user
 current_user=$(logname)
