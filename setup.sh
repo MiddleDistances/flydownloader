@@ -59,13 +59,14 @@ sudo apt-get install -y git
 sudo rm -rf /home/$current_user/flydownloader  # Remove the existing directory and its contents
 sudo git clone https://github.com/MiddleDistances/flydownloader.git /home/$current_user/flydownloader
 
+# Create a helper file with the mass storage directory and username
+echo "mount_dir=$mount_dir" | sudo -u "$current_user" tee "/home/$current_user/flydownloader/storage_path.txt"
+echo "username=$current_user" | sudo -u "$current_user" tee -a "/home/$current_user/flydownloader/storage_path.txt"
 
 # Change ownership of the flydownloader directory to the current user
 echo "Changing ownership of the flydownloader directory..."
 sudo chown -R $current_user:$current_user /home/$current_user/flydownloader
 
-# Create a helper file with the mass storage directory
-echo "$mount_dir" | sudo tee /home/$current_user/flydownloader/storage_path.txt
 
 # Setup Python environment and install dependencies
 echo "Setting up Python environment..."
