@@ -96,7 +96,7 @@ valid users = $current_user" | sudo tee -a /etc/samba/smb.conf
 sudo systemctl restart smbd
 
 # Create a systemd service to run the script at boot
-echo 'Creating systemd service...'
+echo 'Creating systemd service...1'
 sudo tee /etc/systemd/system/flydownloader.service <<EOF
 [Unit]
 Description=Fly Downloader Service
