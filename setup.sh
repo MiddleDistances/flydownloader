@@ -84,7 +84,7 @@ Description=Fly Downloader Service
 After=network.target
 
 \[Service\]
-ExecStart=/opt/flydownloader/venv/bin/python /opt/flydownloader/file_downloader.py
+ExecStart=/home/$USER/flydownloader/venv/bin/python /home/$USER/flydownloader/USB_connect_download_v2.py
 WorkingDirectory=/opt/flydownloader
 Restart=always
 
