@@ -1,21 +1,35 @@
 #!/bin/bash
 
-# Ensure the script is run as root
-if [[ $(id -u) -ne 0 ]]; then
-  echo "This script must be run as root or with sudo."
-  exit 1
-fi
-
 echo "Listing all connected storage devices:"
 lsblk -o NAME,MODEL,SIZE,MOUNTPOINT,FSTYPE,TYPE
 
-# Automatically identify the first external partition
-external_part=$(lsblk -rno NAME,TYPE,MOUNTPOINT | awk '$2=="part" && $3=="" {print $1; exit}')
+# This command will now include all partitions, not just unmounted ones
+all_partitions=$(lsblk -rno NAME,TYPE,MOUNTPOINT | awk '$2=="part" {print $1}')
 
-if [ -z "$external_part" ]; then
-  echo "No suitable external partitions found. Please ensure your external drive is connected."
+if [ -z "$all_partitions" ]; then
+  echo "No partitions found. Please ensure your external drive is connected."
   exit 1
 fi
+
+echo "Available partitions:"
+echo "$all_partitions"
+
+# Example to select a partition manually for operations
+echo "Please type the name of the partition you want to setup (e.g., sda1):"
+read selected_partition
+
+# Check if the user input matches an actual device
+if [[ " $all_partitions " =~ " $selected_partition " ]]; then
+  echo "Setting up /dev/$selected_partition"
+  # Your setup logic here
+else
+  echo "Partition $selected_partition not found among available devices."
+  exit 1
+fi
+
+# Dummy setup logic for the chosen partition
+echo "Selected partition: /dev/$selected_partition will be set up."
+# Insert real operations such as mount, format, etc., here.
 
 # Create a mount point in /mnt if not already existing
 mount_dir="/mnt/auto_mounted_drive"
