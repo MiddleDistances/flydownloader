@@ -207,8 +207,8 @@ def create_movie_from_clips(video_paths, output_dir):
 
 def main():
     config = read_configuration()
-    mount_point = f"/media/{config['mount_point']}/FLY6PRO" 
-    destination_dir = config['mount_point']  # destination_dir is the same as the mount point
+    mount_point = f"/media/{config['username']}/FLY6PRO" 
+    destination_dir = config['mount_dir']  # destination_dir is the same as the mount point
 
     print('Monitoring for camera connection...')
     while True:
