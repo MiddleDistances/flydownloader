@@ -9,7 +9,8 @@ import heapq
 
 def read_configuration():
     # Set default values for configuration
-    config = {'user': 'pi'}  # default user
+    config = {'user': 'pi', 'mount_dir': '/mnt/auto_mounted_drive'}  # default user
+
     try:
         with open("storage_path.txt", "r") as file:
             lines = file.readlines()
@@ -20,9 +21,7 @@ def read_configuration():
         print("Configuration file not found. Using default settings.")
     except ValueError:
         print("Error reading configuration. Ensure it is in key=value format.")
-    
-    # Determine the mount point based on the user
-    config['mount_point'] = f"/media/{config['user']}/FLY6PRO"
+
     return config
 
 def check_disk_usage(path):
