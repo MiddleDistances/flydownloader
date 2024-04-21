@@ -58,31 +58,25 @@ def is_camera_connected(device_name):
 
 import os
 import subprocess
+from datetime import datetime
+
+def generate_mount_point(base_path):
+    """Generates a unique mount point by appending a timestamp."""
+    timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+    return f"{base_path}_{timestamp}"
 
 def mount_device(device_path, mount_point):
-    # Check if the mount point already exists and something is mounted there
     if os.path.ismount(mount_point):
-        # Read the device currently mounted at that point
         with open('/proc/mounts', 'r') as f:
-            mounts = f.readlines()
-        current_device = None
-        for mount in mounts:
-            parts = mount.split()
-            if len(parts) > 1 and parts[1] == mount_point:
-                current_device = parts[0]
-                break
-
-        if current_device == device_path:
+            mounts = f.read()
+        if device_path in mounts:
             print(f"Device {device_path} is already mounted at {mount_point}.")
             return
         else:
-            # If another device is mounted, try a different mount point
-            original_mount_point = mount_point
-            mount_point += '1'  # Modify as needed to create a unique mount point
-            print(f"Attempting to mount {device_path} to {mount_point} instead of {original_mount_point}.")
-            os.makedirs(mount_point, exist_ok=True)  # Ensure the new mount point exists
+            print(f"Another device is mounted at {mount_point}. Generating a new mount point.")
+            mount_point = generate_mount_point(mount_point)
+            os.makedirs(mount_point, exist_ok=True)
 
-    # Proceed to mount if not already mounted
     try:
         subprocess.run(['sudo', 'mount', device_path, mount_point], check=True)
         print(f"Device mounted at {mount_point}.")
