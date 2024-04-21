@@ -70,6 +70,8 @@ sudo git clone https://github.com/MiddleDistances/flydownloader.git /home/$curre
 # Change ownership of the flydownloader directory to the current user
 echo "Changing ownership of the flydownloader directory..."
 sudo chown -R $current_user:$current_user /home/$current_user/flydownloader
+echo "Changing ownership of the storage directory..."
+sudo chown -R $current_user:$current_user $/mount_dir
 
 # Create a helper file with the mass storage directory and username
 echo "mount_dir=$mount_dir" | sudo -u "$current_user" tee "/home/$current_user/flydownloader/storage_path.txt"
