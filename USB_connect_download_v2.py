@@ -9,7 +9,7 @@ import heapq
 
 def read_configuration():
     # Set default values for configuration
-    config = {'user': 'pi', 'mount_dir': '/mnt/auto_mounted_drive'}  # default user
+    config = {'username': 'pi', 'mount_dir': '/mnt/auto_mounted_drive'}  # default user
 
     try:
         with open("storage_path.txt", "r") as file:
