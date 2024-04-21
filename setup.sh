@@ -84,28 +84,54 @@ source /home/$current_user/flydownloader/venv/bin/activate
 pip install -r /home/$current_user/flydownloader/requirements.txt
 deactivate
 
-#install samba
-sudo apt-get install samba -y
-sudo systemctl restart smbd
 
-# Configure Samba to share the mounted device
-echo "Configuring Samba..."
+# Update system and install Samba
+echo "Installing Samba..."
+sudo apt-get update
+sudo apt-get install samba samba-common-bin -y
+
+# Backup existing Samba configuration
+echo "Backing up existing Samba configuration..."
 sudo cp /etc/samba/smb.conf /etc/samba/smb.conf.backup
-echo "\[global\]
+
+# Configure Samba
+echo "Configuring Samba..."
+sudo bash -c "cat > /etc/samba/smb.conf <<EOT
+[global]
 workgroup = WORKGROUP
 server string = Samba Server
 security = user
+map to guest = bad user
 create mask = 0664
 directory mask = 0775
 
-\[$device_name\]
+[$device_name]
 path = $mount_dir
 writeable = Yes
 create mask = 0664
 directory mask = 0775
 public = no
-valid users = $current_user" | sudo tee -a /etc/samba/smb.conf
+browsable = yes
+valid users = $current_user
+EOT"
+
+# Restart Samba services
+echo "Restarting Samba services..."
 sudo systemctl restart smbd
+sudo systemctl restart nmbd
+
+# Adding user to Samba
+echo "Adding user to Samba..."
+sudo smbpasswd -a $current_user
+
+# Set permissions and ownership for the mount directory
+echo "Setting permissions for the mount directory..."
+sudo chown $current_user:$current_user $mount_dir
+sudo chmod 0775 $mount_dir
+
+echo "Samba has been configured. Your share is available on the network."
+
+
 
 # Create a systemd service to run the script at boot
 echo 'Creating systemd service...1'
