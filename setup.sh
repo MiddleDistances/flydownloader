@@ -105,7 +105,7 @@ map to guest = bad user
 create mask = 0664
 directory mask = 0775
 
-[$device_name]
+[CycPiNas]
 path = $mount_dir
 writeable = Yes
 create mask = 0664
