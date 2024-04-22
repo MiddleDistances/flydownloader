@@ -6,6 +6,11 @@ if [[ $(id -u) -ne 0 ]]; then
   exit 1
 fi
 
+#lets do an update
+sudo apt-get update
+sudo apt-get upgrade
+
+
 echo "Listing all connected storage devices:"
 lsblk -o NAME,MODEL,SIZE,MOUNTPOINT,FSTYPE,TYPE
 
