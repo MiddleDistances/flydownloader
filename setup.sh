@@ -45,23 +45,27 @@ echo "You have selected $selected_partition."
 mount_dir="/mnt/auto_mounted_drive"
 mkdir -p "$mount_dir"
 
-# Mount the partition
-if mountpoint -q "$mount_dir"; then
-  echo "$selected_partition is already mounted."
-else
-  mount $selected_partition $mount_dir && echo "$selected_partition has been successfully mounted at $mount_dir."
-  if [ $? -ne 0 ]; then
-    echo "Failed to mount $selected_partition. Check if it's formatted correctly and not in use."
-    exit 1
-  fi
-fi
 
-# Verify the mount
-if mountpoint -q "$mount_dir"; then
-  echo "Mount verification successful. Setup complete! Your files can be placed in $mount_dir."
-else
-  echo "Mount failed, please check the details and try again."
+# setup fstab
+# Define the desired file system type, here assumed 'auto'
+fstype="auto"
+
+# Define the UUID of the selected partition
+uuid=$(blkid -s UUID -o value $selected_partition)
+
+# Add the entry to /etc/fstab
+echo "Adding new entry to /etc/fstab..."
+echo "UUID=$uuid $mount_dir $fstype defaults,uid=$(id -u $current_user),gid=$(id -g $current_user) 0 2" | sudo tee -a /etc/fstab
+
+# Mount all entries in fstab (this will also mount other unmounted partitions defined in fstab)
+sudo mount -a
+
+# Check for errors (optional but recommended step)
+if [ $? -ne 0 ]; then
+  echo "There was an error mounting the devices, check the fstab file and correct any issues."
   exit 1
+else
+  echo "Device mounted successfully via fstab. Setup complete! Your files can be placed in $mount_dir."
 fi
 
 # Get the current user
@@ -149,9 +153,6 @@ Description=Fly Downloader Service
 After=multi-user.target 
 
 [Service]
-Type=oneshot
-ExecStartPre=/bin/chown $current_user:$current_user $mount_dir
-ExecStartPre=/bin/chmod 775 $mount_dir
 ExecStart=/home/pi/flydownloader/venv/bin/python /home/pi/flydownloader/USB_connect_download_v2.py
 Restart=always
 User = $current_user
