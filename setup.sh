@@ -149,9 +149,10 @@ Description=Fly Downloader Service
 After=multi-user.target 
 
 [Service]
+Type=oneshot
+ExecStartPre=/bin/chown $current_user:$current_user $mount_dir
+ExecStartPre=/bin/chmod 775 $mount_dir
 ExecStart=/home/pi/flydownloader/venv/bin/python /home/pi/flydownloader/USB_connect_download_v2.py
-ExecStart=/bin/chown $current_user:$current_user $mount_dir
-ExecStart=/bin/chmod 775 $mount_dir
 Restart=always
 User = $current_user
 
