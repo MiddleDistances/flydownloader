@@ -7,6 +7,7 @@ if [[ $(id -u) -ne 0 ]]; then
 fi
 
 #lets do an update
+echo "Always best to start with an update. We are going to check for updates now."
 sudo apt-get update
 sudo apt-get upgrade
 
