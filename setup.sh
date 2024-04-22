@@ -146,11 +146,13 @@ echo 'Creating systemd service...1'
 sudo tee /etc/systemd/system/flydownloader.service <<EOF
 [Unit]
 Description=Fly Downloader Service
-After=network.target
+After=multi-user.target 
+
 [Service]
 ExecStart=/home/pi/flydownloader/venv/bin/python /home/pi/flydownloader/USB_connect_download_v2.py
-WorkingDirectory=/home/pi/flydownloader
 Restart=always
+User = $current_user
+
 [Install]
 WantedBy=multi-user.target
 EOF
