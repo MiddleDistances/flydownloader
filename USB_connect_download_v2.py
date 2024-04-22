@@ -8,11 +8,13 @@ import time
 import heapq
 
 def read_configuration():
+    logged_in_user = os.getlogin()
+    print(f"The logged-in user is: {logged_in_user}")
     # Set default values for configuration
     config = {'username': 'pi', 'mount_dir': '/mnt/auto_mounted_drive'}  # default user
 
     try:
-        with open("storage_path.txt", "r") as file:
+        with open(f"/home/{logged_in_user}/flydownloader/storage_path.txt", "r") as file:
             lines = file.readlines()
             for line in lines:
                 key, value = line.strip().split('=')
