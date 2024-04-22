@@ -196,7 +196,7 @@ def create_movie_from_clips(video_paths, output_dir):
             with open(concat_file_path, 'w') as concat_file:
                 concat_file.writelines(f"file '{video}'\n" for video in group)
 
-            ffmpeg_cmd = ['ffmpeg', '-f', 'concat', '-safe', '0', '-i', concat_file_path, '-c', 'copy', output_file]
+            ffmpeg_cmd = ['ffmpeg', '-f', 'concat', '-safe', '0', '-i', concat_file_path, '-c', 'copy', '-y', output_file]
             try:
                 subprocess.run(ffmpeg_cmd, check=True)
                 print(f"Successfully created movie: {output_file}")
