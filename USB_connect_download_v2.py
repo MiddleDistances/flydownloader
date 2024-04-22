@@ -67,6 +67,11 @@ def generate_mount_point(base_path):
 
 def mount_device(device_path, mount_point):
     if os.path.ismount(mount_point):
+        # Check if the correct device is mounted there
+        # current_device = os.path.realpath('/dev/disk/by-uuid/' + os.readlink('/dev/disk/by-uuid').split('/')[-1])
+        # if current_device == device_path:
+        #     print(f"Device {device_path} is already mounted at {mount_point}.")
+        #     return
         with open('/proc/mounts', 'r') as f:
             mounts = f.read()
         if device_path in mounts:
@@ -201,12 +206,13 @@ def create_movie_from_clips(video_paths, output_dir):
 
 def main():
     config = read_configuration()
-    mount_point = f"/media/{config['username']}/FLY6PRO" 
+    device_name = 'FLY6PRO'
+    mount_point = f"/media/{config['username']}/{device_name}" 
     destination_dir = config['mount_dir']  # destination_dir is the same as the mount point
 
     print('Monitoring for camera connection...')
     while True:
-        device_path = is_camera_connected('FLY6PRO')  # Assuming device_name is constant
+        device_path = is_camera_connected(device_name)  # Assuming device_name is constant
         if device_path:
             print('Camera connected. Mounting device...')
             try:
