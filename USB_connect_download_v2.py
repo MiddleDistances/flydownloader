@@ -8,7 +8,10 @@ import time
 import heapq
 
 def read_configuration():
-    logged_in_user = os.getlogin()
+    if 'SUDO_USER' in os.environ:
+        logged_in_user = os.environ['SUDO_USER']
+    else:
+        logged_in_user = os.getlogin()
     print(f"The logged-in user is: {logged_in_user}")
     # Set default values for configuration
     config = {'username': 'pi', 'mount_dir': '/mnt/auto_mounted_drive'}  # default user
