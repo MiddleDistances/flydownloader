@@ -7,12 +7,20 @@ import shutil
 import time
 import heapq
 
+def get_username_from_path():
+    # Assuming the script is operating in a path like /home/username/something
+    path = os.path.abspath(__file__)  # Gets the absolute path to the current script
+    print(f"Path to script: {path}")
+    parts = path.split(os.sep)  # Split the path into components
+    if 'home' in parts:
+        username_index = parts.index('home') + 1  # The username should follow /home
+        return parts[username_index]
+    return 'pi'  # Fallback username
+
 def read_configuration():
-    if 'SUDO_USER' in os.environ:
-        logged_in_user = os.environ['SUDO_USER']
-    else:
-        logged_in_user = os.getlogin()
-    print(f"The logged-in user is: {logged_in_user}")
+    logged_in_user = get_username_from_path()
+    # Use the extracted username for further processing
+    print(f"Operating under user: {logged_in_user}")
     # Set default values for configuration
     config = {'username': 'pi', 'mount_dir': '/mnt/auto_mounted_drive'}  # default user
 
