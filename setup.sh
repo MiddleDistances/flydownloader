@@ -47,15 +47,15 @@ mkdir -p "$mount_dir"
 
 
 # setup fstab
-# Define the desired file system type, here assumed 'auto'
-fstype="auto"
+# Define the file system type as 'exfat'
+fstype="exfat"
 
 # Define the UUID of the selected partition
 uuid=$(blkid -s UUID -o value $selected_partition)
 
-# Add the entry to /etc/fstab
+# Add the entry to /etc/fstab with specific mount options for exfat
 echo "Adding new entry to /etc/fstab..."
-echo "UUID=$uuid $mount_dir $fstype defaults,uid=$(id -u $current_user),gid=$(id -g $current_user) 0 2" | sudo tee -a /etc/fstab
+echo "UUID=$uuid $mount_dir $fstype defaults,uid=$(id -u $current_user),gid=$(id -g $current_user),umask=0022 0 2" | sudo tee -a /etc/fstab
 
 # Mount all entries in fstab (this will also mount other unmounted partitions defined in fstab)
 sudo mount -a
@@ -122,9 +122,9 @@ path = $mount_dir
 writeable = Yes
 create mask = 0664
 directory mask = 0775
-public = no
+public = yes
+guest ok = yes
 browsable = yes
-valid users = $current_user
 force user = $current_user
 force group = $current_user
 EOT"
