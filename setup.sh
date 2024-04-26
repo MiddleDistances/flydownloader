@@ -125,6 +125,8 @@ directory mask = 0775
 public = no
 browsable = yes
 valid users = $current_user
+force user = $current_user
+force group = $current_user
 EOT"
 
 # Restart Samba services
@@ -138,8 +140,8 @@ sudo smbpasswd -a $current_user
 
 # Set permissions and ownership for the mount directory
 echo "Setting permissions for the mount directory..."
-sudo chown $current_user:$current_user $mount_dir
-sudo chmod 0775 $mount_dir
+sudo chown -R $current_user:$current_user $mount_dir
+sudo chmod -R 0775 $mount_dir
 
 echo "Samba has been configured. Your share is available on the network."
 
