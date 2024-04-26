@@ -6,6 +6,9 @@ from tqdm import tqdm
 import shutil
 import time
 import heapq
+import os
+import pwd
+import grp
 
 def get_username_from_path():
     # Assuming the script is operating in a path like /home/username/something
@@ -15,7 +18,9 @@ def get_username_from_path():
     if 'home' in parts:
         username_index = parts.index('home') + 1  # The username should follow /home
         return parts[username_index]
-    return 'pi'  # Fallback username
+    return 'default_user'  # Fallback username
+
+
 
 def read_configuration():
     logged_in_user = get_username_from_path()
@@ -217,11 +222,25 @@ def create_movie_from_clips(video_paths, output_dir):
                 print(f"Failed to create movie from clips. Error: {e}")
 
 
+def change_permissions(mount_point):
+    print('Modifying permissions...')
+    current_user = os.getlogin()
+
+    # Change ownership recursively to the current user
+    subprocess.run(['sudo', 'chown', '-R', f'{current_user}:{current_user}', mount_point])
+
+    # Change permissions recursively to read, write, execute for user and group
+    subprocess.run(['sudo', 'chmod', '-R', '0775', mount_point])
+    time.sleep(5)
+    print('Permissions changed. Starting file download...')
+
 def main():
     config = read_configuration()
     device_name = 'FLY6PRO'
     mount_point = f"/media/{config['username']}/{device_name}" 
     destination_dir = config['mount_dir']  # destination_dir is the same as the mount point
+
+    change_permissions(mount_point)
 
     print('Monitoring for camera connection...')
     while True:
@@ -230,6 +249,7 @@ def main():
             print('Camera connected. Mounting device...')
             try:
                 mount_device(device_path, mount_point)
+
                 print('Device mounted. Starting file download...')
 
                 all_downloaded_files = []
@@ -250,6 +270,8 @@ def main():
             
             while is_camera_connected('FLY6PRO'):
                 time.sleep(1)  # Wait until the camera is disconnected
+        
+            change_permissions(mount_point)
 
         else:
             print('Camera not connected. Waiting...')
